@@ -34,9 +34,10 @@ target_link_libraries(${TARGET} PUBLIC stb)
 # Installation
 # ==================================================================================================
 install(TARGETS ${TARGET}
-    EXPORT "${TARGET}Config"
+    EXPORT "${TARGET}Targets"
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     INCLUDES DESTINATION include)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
-install(EXPORT "${TARGET}Config" DESTINATION "share/${TARGET}")
+install(EXPORT "${TARGET}Targets" DESTINATION "share/${TARGET}")
+install(FILES cmake/tinygltfConfig.cmake DESTINATION "share/${TARGET}")
