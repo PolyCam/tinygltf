@@ -13,8 +13,10 @@ file(GLOB SRCS src/*.cpp)
 # ==================================================================================================
 add_library(${TARGET} STATIC ${SRCS})
 target_compile_definitions(${TARGET} PUBLIC TINYGLTF_USE_CPP14)
-target_include_directories(${TARGET} PUBLIC include)
-target_include_directories(${TARGET} PRIVATE src)
+target_include_directories(${TARGET} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
 
 # ==================================================================================================
 # Dependencies
