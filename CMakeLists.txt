@@ -26,5 +26,11 @@ target_link_libraries(${TARGET} PUBLIC stb)
 # ==================================================================================================
 # Installation
 # ==================================================================================================
-install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+install(TARGETS ${TARGET}
+    EXPORT "${TARGET}Config"
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    INCLUDES DESTINATION include)
+)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+install(EXPORT "${TARGET}Config" DESTINATION "share/${TARGET}")
