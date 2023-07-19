@@ -6913,13 +6913,14 @@ static void SerializeGltfBufferView(BufferView &bufferView, json &o) {
 }
 
 static void SerializeGltfImage(Image &image, json &o) {
-  // if uri empty, the mimeType and bufferview should be set
   if (image.uri.empty()) {
     SerializeStringProperty("mimeType", image.mimeType, o);
     SerializeNumberProperty<int>("bufferView", image.bufferView, o);
   } else {
-    // TODO(syoyo): dlib::urilencode?
     SerializeStringProperty("uri", image.uri, o);
+    if(!image.mimeType.empty()) {
+      SerializeStringProperty("mimeType", image.mimeType, o);
+    }
   }
 
   if (image.name.size()) {
