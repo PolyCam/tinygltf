@@ -1414,6 +1414,14 @@ class TinyGLTF {
 
   bool GetPreserveImageChannels() const { return preserve_image_channels_; }
 
+  ///
+  /// When enabled, text GLTF files with external textures do not load or save, 
+  /// The image URI field is simply set on load or written to the JSON on save.
+  /// On load, the image data is not loaded. On save, image data is not written.
+  void SetSkipGltfExternalImageFiles(bool skip) {
+    skip_gltf_external_image_files_ = skip;
+  }
+  
  private:
   ///
   /// Loads glTF asset from string(memory).
@@ -1435,6 +1443,8 @@ class TinyGLTF {
 
   bool preserve_image_channels_ = false;  /// Default false(expand channels to
                                           /// RGBA) for backward compatibility.
+                                          
+  bool skip_gltf_external_image_files_ = false;
 
   // Warning & error messages
   std::string warn_;
@@ -2815,8 +2825,12 @@ static std::string MimeToExt(const std::string &mimeType) {
 
 static void UpdateImageObject(Image &image, std::string &baseDir, int index,
                               bool embedImages,
+                              bool skip_gltf_external_image_files,
                               WriteImageDataFunction *WriteImageData = nullptr,
                               void *user_data = nullptr) {
+  if(skip_gltf_external_image_files && !image.uri.empty() && image.image.empty()) {
+    return;
+  }
   std::string filename;
   std::string ext;
   // If image has uri, use it it as a filename
@@ -3755,6 +3769,7 @@ static bool ParseAsset(Asset *asset, std::string *err, const json &o,
 static bool ParseImage(Image *image, const int image_idx, std::string *err,
                        std::string *warn, const json &o,
                        bool store_original_json_for_extras_and_extensions,
+                       bool skip_gltf_external_image_files,
                        const std::string &basedir, FsCallbacks *fs,
                        LoadImageDataFunction *LoadImageData = nullptr,
                        void *load_image_user_data = nullptr) {
@@ -3866,6 +3881,9 @@ static bool ParseImage(Image *image, const int image_idx, std::string *err,
 #ifdef TINYGLTF_NO_EXTERNAL_IMAGE
     return true;
 #endif
+    if(skip_gltf_external_image_files) {
+      return true;
+    }
     std::string decoded_uri = dlib::urldecode(uri);
     if (!LoadExternalFile(&img, err, warn, decoded_uri, basedir,
                           /* required */ false, /* required bytes */ 0,
@@ -5942,7 +5960,7 @@ bool TinyGLTF::LoadFromString(Model *model, std::string *err, std::string *warn,
       }
       Image image;
       if (!ParseImage(&image, idx, err, warn, o,
-                      store_original_json_for_extras_and_extensions_, base_dir,
+                      store_original_json_for_extras_and_extensions_, skip_gltf_external_image_files_, base_dir,
                       &fs, &this->LoadImageData, load_image_user_data)) {
         return false;
       }
@@ -6895,13 +6913,14 @@ static void SerializeGltfBufferView(BufferView &bufferView, json &o) {
 }
 
 static void SerializeGltfImage(Image &image, json &o) {
-  // if uri empty, the mimeType and bufferview should be set
   if (image.uri.empty()) {
     SerializeStringProperty("mimeType", image.mimeType, o);
     SerializeNumberProperty<int>("bufferView", image.bufferView, o);
   } else {
-    // TODO(syoyo): dlib::urilencode?
     SerializeStringProperty("uri", image.uri, o);
+    if(!image.mimeType.empty()) {
+      SerializeStringProperty("mimeType", image.mimeType, o);
+    }
   }
 
   if (image.name.size()) {
@@ -7692,7 +7711,7 @@ bool TinyGLTF::WriteGltfSceneToStream(Model *model, std::ostream &stream,
       // UpdateImageObject need baseDir but only uses it if embeddedImages is
       // enabled, since we won't write separate images when writing to a stream
       // we
-      UpdateImageObject(model->images[i], dummystring, int(i), true,
+      UpdateImageObject(model->images[i], dummystring, int(i), true, skip_gltf_external_image_files_,
                         &this->WriteImageData, this->write_image_user_data_);
       SerializeGltfImage(model->images[i], image);
       JsonPushBack(images, std::move(image));
@@ -7714,7 +7733,7 @@ bool TinyGLTF::WriteGltfSceneToFile(Model *model, const std::string &filename,
                                     bool prettyPrint = true,
                                     bool writeBinary = false) {
   JsonDocument output;
-  std::string defaultBinFilename = GetBaseFilename(filename);
+  std::string defaultBinFilename = "geometry";
   std::string defaultBinFileExt = ".bin";
   std::string::size_type pos =
       defaultBinFilename.rfind('.', defaultBinFilename.length());
@@ -7781,7 +7800,7 @@ bool TinyGLTF::WriteGltfSceneToFile(Model *model, const std::string &filename,
     for (unsigned int i = 0; i < model->images.size(); ++i) {
       json image;
 
-      UpdateImageObject(model->images[i], baseDir, int(i), embedImages,
+      UpdateImageObject(model->images[i], baseDir, int(i), embedImages, skip_gltf_external_image_files_,
                         &this->WriteImageData, this->write_image_user_data_);
       SerializeGltfImage(model->images[i], image);
       JsonPushBack(images, std::move(image));
