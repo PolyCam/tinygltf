@@ -393,6 +393,7 @@ class Value {
   size_t Size() const { return (IsArray() ? ArrayLen() : Keys().size()); }
 
   bool operator==(const tinygltf::Value &other) const;
+  bool operator<(const tinygltf::Value &other) const;
 
  protected:
   int type_ = NULL_TYPE;
@@ -1747,6 +1748,37 @@ struct LoadImageDataOption {
   bool preserve_channels{false};
 };
 
+// LessThan function for Value, for recursivity
+static bool LessThan(const tinygltf::Value &one, const tinygltf::Value &other) {
+  if (one.Type() != other.Type())
+    return one.Type() != other.Type();
+  switch (one.Type()) {
+    case NULL_TYPE:
+      return false;
+    case BOOL_TYPE:
+      return one.Get<bool>() < other.Get<bool>();
+    case REAL_TYPE:
+      return one.Get<double>() < other.Get<double>();
+    case INT_TYPE:
+      return one.Get<int>() < other.Get<int>();
+    case OBJECT_TYPE: {
+      return one.Get<tinygltf::Value::Object>() < other.Get<tinygltf::Value::Object>();
+    }
+    case ARRAY_TYPE: {
+      return one.Get<tinygltf::Value::Array>() < other.Get<tinygltf::Value::Array>();
+    }
+    case STRING_TYPE:
+      return one.Get<std::string>() < other.Get<std::string>();
+    case BINARY_TYPE:
+      return one.Get<std::vector<unsigned char> >() <
+             other.Get<std::vector<unsigned char> >();
+    default: {
+      // unhandled type
+      return false;
+    }
+  }
+}
+
 // Equals function for Value, for recursivity
 static bool Equals(const tinygltf::Value &one, const tinygltf::Value &other) {
   if (one.Type() != other.Type()) return false;
@@ -2002,6 +2034,9 @@ bool PbrMetallicRoughness::operator==(const PbrMetallicRoughness &other) const {
 }
 bool Value::operator==(const Value &other) const {
   return Equals(*this, other);
+}
+bool Value::operator<(const Value &other) const {
+  return LessThan(*this, other);
 }
 
 static void swap4(unsigned int *val) {
