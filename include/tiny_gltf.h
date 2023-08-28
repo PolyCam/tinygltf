@@ -1751,7 +1751,7 @@ struct LoadImageDataOption {
 // LessThan function for Value, for recursivity
 static bool LessThan(const tinygltf::Value &one, const tinygltf::Value &other) {
   if (one.Type() != other.Type())
-    return one.Type() != other.Type();
+    return one.Type() < other.Type();
   switch (one.Type()) {
     case NULL_TYPE:
       return false;
